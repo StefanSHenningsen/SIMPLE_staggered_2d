@@ -39,7 +39,7 @@ class InputAndResults():
     '''
     Class to contain inputs and results. Acts like an I/O-module.
     '''
-    def __init__(self, t_final, dt_res, dt, grid,):
+    def __init__(self, t_final, dt_res, dt, grid):
         '''
         t_final: final time (when to terminate simulation)
         dt_res: time interval to save to result
@@ -54,20 +54,20 @@ class InputAndResults():
         self.vy_res = []
         self.p_res = []
     
-def solver_driver(m, io_res: InputAndResults, BC: BoundaryConditions):
+def solver_driver(m, io_res: InputAndResults, bc: BoundaryConditions):
     '''
     Driver program to take timestep and save results to array
     Input:
         m: max number of times to store in result/outer timesteps to take
         io_res: class holding Input and results
     '''
-    io_res.t_res.append(BC.t0)
-    io_res.vx_res.append(np.copy(BC.vx0))
-    io_res.vy_res.append(np.copy(BC.vy0))
-    io_res.p_res.append(np.copy(BC.p0))
+    io_res.t_res.append(bc.t0)
+    io_res.vx_res.append(np.copy(bc.vx0))
+    io_res.vy_res.append(np.copy(bc.vy0))
+    io_res.p_res.append(np.copy(bc.p0))
 
-    t = BC.t0
-    vx, vy, p = BC.vx0, BC.vy0, BC.p0
+    t = bc.t0
+    vx, vy, p = bc.vx0, bc.vy0, bc.p0
 
     for _ in range(m):
         t_end = t + io_res.dt_res
@@ -81,7 +81,7 @@ def solver_driver(m, io_res: InputAndResults, BC: BoundaryConditions):
         io_res.vy_res.append(np.copy(vy))
         io_res.p_res.append(np.copy(p))
 
-        if t >= io_res.t_final: 
+        if t >= io_res.t_final:
             break
 
 
