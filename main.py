@@ -108,9 +108,6 @@ def solver_propagator(t, vx, vy, p, dt):
     solver_outer_iteration(t, vx, vy, p, dt)
     #go back and do it again + check for convergence
 
-
-
-
     return 0
 
 def solver_outer_iteration(t, vx, vy, p, dt):
