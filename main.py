@@ -83,7 +83,7 @@ class SetupAndResults():
     
 def solver_driver(set_res: SetupAndResults, bc: BoundaryConditions):
     '''
-    Driver program to take timestep and save results to array
+    Driver to take "outer" timestep, t -> t + dt_res, and save results to array
     '''
     set_res.t_res.append(bc.t0)
     set_res.vx_res.append(np.copy(bc.vx0))
@@ -109,7 +109,7 @@ def solver_driver(set_res: SetupAndResults, bc: BoundaryConditions):
 
 def solver_integrator(t, vx, vy, p, dt, t_end, set_res: SetupAndResults):
     '''
-    Take one output step
+    Take one timestep, t -> t + dt.
     '''
     for _ in range(set_res.n_max_integrator):
         if t_end - t < dt:
@@ -121,7 +121,8 @@ def solver_integrator(t, vx, vy, p, dt, t_end, set_res: SetupAndResults):
 
 def solver_propagator(t, vx, vy, p, dt, set_res: SetupAndResults):
     '''
-    Take one single timestep p. 188 - ...
+    Take one single timestep going through outer iterations and 
+    checking for convergence (p. 188 - ...).
     '''
     vx_prev, vy_prev, p_prev =  np.copy(vx), np.copy(vy), np.copy(p)
     for _ in range(set_res.n_max_outer_ite):
@@ -155,6 +156,7 @@ def solver_outer_iteration(t, vx, vy, p, dt, set_res):
     solver_inner_iteration()
     #correct velocity and pressure
     correct_presure_velocity()
+    
     return  vx, vy, p
 
 
@@ -189,6 +191,9 @@ def check_convergence_outer_ite(vx, vy, p, vx_prev, vy_prev, p_prev):
     #TODO make correct...
     return True
 
+
+
+#**********************************************************************
 def add(x,y):
     return x + y
 
@@ -197,6 +202,7 @@ def divide(x,y):
         raise ValueError('Can not divide by zero!')
     return x/y
 
+#**********************************************************************
 if __name__ == "__main__":
     grid_test = Grid(3, 2, 3, 4)
     print(grid_test.grid_xx)
