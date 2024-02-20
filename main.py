@@ -41,4 +41,5 @@ class InputAndResults():
         self.tf = tf
         self.dt_res = dt_res
         self.dt = dt #TODO add more as we go on
+        
 
