@@ -48,11 +48,12 @@ class BoundaryConditions():
         self.p0 = np.zeros((grid.ny, grid.nx))
         self.t0 = 0
 
-class InputAndResults():
+class SetupAndResults():
     '''
     Class to contain inputs and results. Acts like an I/O-module.
     '''
-    def __init__(self, t_final, dt_res, dt, grid):
+    def __init__(self, t_final, dt_res, dt, n_max_driver, n_max_integrator,
+                 n_max_outer_ite, n_max_inner_ite):
         '''
         t_final: final time (when to terminate simulation)
         dt_res: time interval to save to result
@@ -61,15 +62,25 @@ class InputAndResults():
         '''
         self.t_final = t_final
         self.dt_res = dt_res
-        self.dt = dt #TODO add more as we go on
+        self.dt = dt
+
+        self.n_max_driver = n_max_driver
+        self.n_max_integrator = n_max_integrator
+        self.n_max_outer_ite = n_max_outer_ite
+        self.n_max_inner_ite = n_max_inner_ite
+
         self.t_res = [] #TODO store in a better way using pandas?
         self.vx_res = []
         self.vy_res = []
         self.p_res = []
+
     def export_results(self):
-        pass
+        '''
+        use to export results for further analysis and visualization
+        '''
+        pass #TODO
     
-def solver_driver(n_driver,n_integrator, io_res: InputAndResults, bc: BoundaryConditions):
+def solver_driver(set_res: SetupAndResults, bc: BoundaryConditions):
     '''
     Driver program to take timestep and save results to array
     Input:
@@ -77,27 +88,24 @@ def solver_driver(n_driver,n_integrator, io_res: InputAndResults, bc: BoundaryCo
         n_integrator: max number of timesteps in integrator
         io_res: class holding Input and results
     '''
-    io_res.t_res.append(bc.t0)
-    io_res.vx_res.append(np.copy(bc.vx0))
-    io_res.vy_res.append(np.copy(bc.vy0))
-    io_res.p_res.append(np.copy(bc.p0))
-
+    set_res.t_res.append(bc.t0)
+    set_res.vx_res.append(np.copy(bc.vx0))
+    set_res.vy_res.append(np.copy(bc.vy0))
+    set_res.p_res.append(np.copy(bc.p0))
+    
     t = bc.t0
     vx, vy, p = bc.vx0, bc.vy0, bc.p0
-
-    for _ in range(n_driver):
-        t_end = t + io_res.dt_res
-        if t_end > io_res.t_final:
-            t_end = io_res.t_final
-        dt = io_res.dt
-        solver_integrator(t, vx, vy, p, dt, t_end, n_integrator)
-
-        io_res.t_res.append(t)
-        io_res.vx_res.append(np.copy(vx))
-        io_res.vy_res.append(np.copy(vy))
-        io_res.p_res.append(np.copy(p))
-
-        if t >= io_res.t_final:
+    for _ in range(set_res.n_max_driver):
+        t_end = t + set_res.dt_res
+        if t_end > set_res.t_final:
+            t_end = set_res.t_final
+        dt = set_res.dt
+        solver_integrator(t, vx, vy, p, dt, t_end, set_res.n_max_integrator)
+        set_res.t_res.append(t)
+        set_res.vx_res.append(np.copy(vx))
+        set_res.vy_res.append(np.copy(vy))
+        set_res.p_res.append(np.copy(p))
+        if t >= set_res.t_final:
             break
 
 
@@ -188,5 +196,9 @@ if __name__ == "__main__":
     print(grid_test.grid_xx)
     print(grid_test.grid_yy)
     bc_test = BoundaryConditions(grid_test, 1,2,3,4)
-    print(bc_test.vw, bc_test.ve, bc_test.vn, bc_test.vs)
-    print(bc_test.p0, bc_test.t0, bc_test.vx0, bc_test.vy0)
+    #print(bc_test.vw, bc_test.ve, bc_test.vn, bc_test.vs)
+    #print(bc_test.p0, bc_test.t0, bc_test.vx0, bc_test.vy0)
+    set_res_test = SetupAndResults(5, 2, 1, 100, 100, 100, 100)
+    solver_driver(set_res_test, bc_test)
+    #print(set_res_test.t_res)
+    #print(set_res_test.vx_res)
