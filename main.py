@@ -29,18 +29,20 @@ class BoundaryConditions():
     equations for staggered grid.
     '''
     def __init__(self, grid: Grid, vw, ve, vn, vs):
-        '''v_w is the velocity at the western boundary
+        '''
+        vw is the velocity at the western boundary
         TODO make able to deal with more complex bc + pressure
         '''
         self.init_bc_arrays(grid, vw, ve, vn, vs)
         self.init_values_zero_grid(grid)
-    
+
     def init_bc_arrays(self, grid, vw, ve, vn, vs):
         '''Init bc arrays'''
         self.vw = np.full(grid.ny, vw)
         self.ve = np.full(grid.ny, ve)
         self.vn = np.full(grid.nx, vn)
         self.vs = np.full(grid.nx, vs)
+
     def init_values_zero_grid(self, grid: Grid):
         '''Init values on grid, here all values are ero'''    
         self.vx0 = np.zeros((grid.ny, grid.nx))
@@ -58,7 +60,6 @@ class SetupAndResults():
         t_final: final time (when to terminate simulation)
         dt_res: time interval to save to result
         dt: time interval for each iteration
-        grid: class holding the grid
         '''
         self.t_final = t_final
         self.dt_res = dt_res
@@ -83,10 +84,6 @@ class SetupAndResults():
 def solver_driver(set_res: SetupAndResults, bc: BoundaryConditions):
     '''
     Driver program to take timestep and save results to array
-    Input:
-        n_driver: max number of times to store in result/outer timesteps to take
-        n_integrator: max number of timesteps in integrator
-        io_res: class holding Input and results
     '''
     set_res.t_res.append(bc.t0)
     set_res.vx_res.append(np.copy(bc.vx0))
@@ -100,7 +97,8 @@ def solver_driver(set_res: SetupAndResults, bc: BoundaryConditions):
         if t_end > set_res.t_final:
             t_end = set_res.t_final
         dt = set_res.dt
-        solver_integrator(t, vx, vy, p, dt, t_end, set_res.n_max_integrator)
+        t, vx, vy, p = solver_integrator(t, vx, vy, p, dt,
+                                         t_end, set_res)
         set_res.t_res.append(t)
         set_res.vx_res.append(np.copy(vx))
         set_res.vy_res.append(np.copy(vy))
@@ -109,29 +107,33 @@ def solver_driver(set_res: SetupAndResults, bc: BoundaryConditions):
             break
 
 
-def solver_integrator(t, vx, vy, p, dt, t_end, n_integrator):
+def solver_integrator(t, vx, vy, p, dt, t_end, set_res: SetupAndResults):
     '''
     Take one output step
     '''
-    for _ in range(n_integrator):
-        if (t_end - t < dt): 
+    for _ in range(set_res.n_max_integrator):
+        if t_end - t < dt:
             dt = t_end - t
-        solver_propagator(t, vx, vy, p, dt)
-        if t > t_end:
-            return None
+        t, vx, vy, p = solver_propagator(t, vx, vy, p, dt, set_res)
+        if t >= t_end:
+            return t, vx, vy, p
     raise RuntimeError("n_integrator was reached before it finished")
 
-def solver_propagator(t, vx, vy, p, dt):
+def solver_propagator(t, vx, vy, p, dt, set_res: SetupAndResults):
     '''
-    Take one single timestep p. 188
+    Take one single timestep p. 188 - ...
     '''
-    #loop in outer iterations
-    solver_outer_iteration(t, vx, vy, p, dt)
-    #go back and do it again + check for convergence
+    vx_prev, vy_prev, p_prev =  np.copy(vx), np.copy(vy), np.copy(p)
+    for _ in range(set_res.n_max_outer_ite):
+        vx, vy, p = solver_outer_iteration(t, vx_prev, vy_prev, p_prev,
+                                           dt, set_res)
+        if check_convergence_outer_ite(vx, vy, p, vx_prev, vy_prev, p_prev):
+            break
+        vx_prev, vy_prev, p_prev =  np.copy(vx), np.copy(vy), np.copy(p)
+    t = t + dt
+    return t, vx, vy, p
 
-    return 0
-
-def solver_outer_iteration(t, vx, vy, p, dt):
+def solver_outer_iteration(t, vx, vy, p, dt, set_res):
     '''
     make sequential under-relaxation (p. 118)
     setup p.178 and p. 188
@@ -142,6 +144,7 @@ def solver_outer_iteration(t, vx, vy, p, dt):
     5. go back to 2. and do it all again (outer iteration)
     6. when converged to go next timestep
     '''
+
     #setup eq. for momentum
     AE, AN, AW, AS, AP, QP = get_equations_momentum(vx, vy, p, dt)
     #solve inner iteration for u
@@ -152,7 +155,7 @@ def solver_outer_iteration(t, vx, vy, p, dt):
     solver_inner_iteration()
     #correct velocity and pressure
     correct_presure_velocity()
-    return None
+    return  vx, vy, p
 
 
 def solver_inner_iteration():
@@ -181,6 +184,10 @@ def correct_presure_velocity():
     '''
     return None
 
+def check_convergence_outer_ite(vx, vy, p, vx_prev, vy_prev, p_prev):
+    '''Test convergence...'''
+    #TODO make correct...
+    return True
 
 def add(x,y):
     return x + y
@@ -197,7 +204,7 @@ if __name__ == "__main__":
     bc_test = BoundaryConditions(grid_test, 1,2,3,4)
     #print(bc_test.vw, bc_test.ve, bc_test.vn, bc_test.vs)
     #print(bc_test.p0, bc_test.t0, bc_test.vx0, bc_test.vy0)
-    set_res_test = SetupAndResults(5, 2, 1, 100, 100, 100, 100)
+    set_res_test = SetupAndResults(5, 2, 1, 10, 10, 10, 10)
     solver_driver(set_res_test, bc_test)
-    #print(set_res_test.t_res)
-    #print(set_res_test.vx_res)
+    print(set_res_test.t_res)
+    print(set_res_test.vx_res)
