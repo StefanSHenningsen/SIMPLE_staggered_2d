@@ -13,8 +13,8 @@ class Grid():
 
     def generate_grid(self):
         ''' 
-        Function to generate grid - is uniform here
-        TODO try to make nonuniform + give unittest
+        Function to generate grid - is uniform here and the grid contains 
+        the boundary points. TODO try to make nonuniform + give unittest
         '''
         x_val = np.linspace(0, self.lx, self.nx + 1, endpoint=True)
         y_val = np.linspace(0, self.ly, self.ny + 1, endpoint=True)
@@ -24,24 +24,29 @@ class Grid():
 
 class BoundaryConditions():
     '''
-    Cclass to contain and define boundary conditions for a square grid and
+    Class to contain and define boundary conditions for a square grid and
     Dirichlet boundary conditions. The pressure does not enter in the
     equations for staggered grid.
     '''
-    def __init__(self, grid, v_w, v_e, v_n, v_s):
-        '''v_w is the velocity at the western boundary'''
-        self.bc_w = None #TODO store as arrays
-        self.bc_e = None
-        self.bc_n = None
-        self.bc_s = None    
-
-    def init_values_grid(self, grid, t0, vx0, vy0, p0):
-        '''Init values on grid for t=0'''    
-        self.vx0 = None #TODO store as arrays
-        self.vy0 = None
-        self.p0 = None
-        self.t0 = None
-        
+    def __init__(self, grid: Grid, vw, ve, vn, vs):
+        '''v_w is the velocity at the western boundary
+        TODO make able to deal with more complex bc + pressure
+        '''
+        self.init_bc_arrays(grid, vw, ve, vn, vs)
+        self.init_values_zero_grid(grid)
+    
+    def init_bc_arrays(self, grid, vw, ve, vn, vs):
+        '''Init bc arrays'''
+        self.vw = np.full(grid.ny, vw)
+        self.ve = np.full(grid.ny, ve)
+        self.vn = np.full(grid.nx, vn)
+        self.vs = np.full(grid.nx, vs)
+    def init_values_zero_grid(self, grid: Grid):
+        '''Init values on grid, here all values are ero'''    
+        self.vx0 = np.zeros((grid.ny, grid.nx))
+        self.vy0 = np.zeros((grid.ny, grid.nx))
+        self.p0 = np.zeros((grid.ny, grid.nx))
+        self.t0 = 0
 
 class InputAndResults():
     '''
@@ -179,7 +184,9 @@ def divide(x,y):
     return x/y
 
 if __name__ == "__main__":
-    grid = Grid(5, 5, 10, 5)
-    print(grid.grid_xx)
-    print(grid.grid_yy)
-
+    grid_test = Grid(3, 2, 3, 4)
+    print(grid_test.grid_xx)
+    print(grid_test.grid_yy)
+    bc_test = BoundaryConditions(grid_test, 1,2,3,4)
+    print(bc_test.vw, bc_test.ve, bc_test.vn, bc_test.vs)
+    print(bc_test.p0, bc_test.t0, bc_test.vx0, bc_test.vy0)
