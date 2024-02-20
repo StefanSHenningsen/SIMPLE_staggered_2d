@@ -161,7 +161,6 @@ def solver_inner_iteration():
     '''
     return None
 
-
 def get_equations_momentum(vx, vy, p, dt):
     '''
     make system of equations to solve
