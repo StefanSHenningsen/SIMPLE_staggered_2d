@@ -2,16 +2,24 @@ import numpy as np
 
 class Grid():
     '''
-    Class to contain and generate the grid. Origo is at the lower left corner
-    and x-direction is horizontal (columns)
+    Class to contain and generate the grid. Origo is at the upper left corner
+    and x-direction is horizontal (columns) left to right
+    and y-direction is vertical (rows) up to down
     '''
-    def __init__(self, nx, ny):
+    def __init__(self, nx, ny, lx, ly):
         self.nx, self.ny = nx, ny
-        self.grid = self.generate_grid()
+        self.lx, self.ly = lx, ly
+        self.grid_xx, self.grid_yy = self.generate_grid()
 
     def generate_grid(self):
-        ''' Function to generate grid can be uniform or not...'''
-        return 0
+        ''' 
+        Function to generate grid - is uniform here
+        TODO try to make nonuniform + give unittest
+        '''
+        x_val = np.linspace(0, self.lx, self.nx + 1, endpoint=True)
+        y_val = np.linspace(0, self.ly, self.ny + 1, endpoint=True)
+        grid_xx,grid_yy = np.meshgrid(x_val,y_val)
+        return grid_xx, grid_yy
 
 
 class BoundaryConditions():
@@ -169,3 +177,9 @@ def divide(x,y):
     if y == 0:
         raise ValueError('Can not divide by zero!')
     return x/y
+
+if __name__ == "__main__":
+    grid = Grid(5, 5, 10, 5)
+    print(grid.grid_xx)
+    print(grid.grid_yy)
+
