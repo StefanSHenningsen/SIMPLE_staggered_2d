@@ -53,6 +53,8 @@ class InputAndResults():
         self.vx_res = []
         self.vy_res = []
         self.p_res = []
+    def export_results(self):
+        pass
     
 def solver_driver(n_driver,n_integrator, io_res: InputAndResults, bc: BoundaryConditions):
     '''
@@ -161,3 +163,12 @@ def correct_presure_velocity():
     eq. 7.107??
     '''
     return None
+
+
+def add(x,y):
+    return x + y
+
+def divide(x,y):
+    if y == 0:
+        raise ValueError('Can not divide by zero!')
+    return x/y
