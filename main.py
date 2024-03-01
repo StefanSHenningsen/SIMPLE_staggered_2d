@@ -75,6 +75,17 @@ class SetupAndResults():
         self.vy_res = []
         self.p_res = []
 
+        self.t_prev_1 = [] #TODO do this in a smarter way? prev 1 is prev
+        self.vx_prev_1 = []
+        self.vy_prev_1 = []
+        self.p_prev_1 = []
+        
+        self.t_prev_2 = []#prev 2 is prev prev
+        self.vx_prev_2 = []
+        self.vy_prev_2 = []
+        self.p_prev_2 = []
+
+
     def export_results(self):
         '''
         use to export results for further analysis and visualization
@@ -90,15 +101,22 @@ def solver_driver(set_res: SetupAndResults, bc: BoundaryConditions):
     set_res.vy_res.append(np.copy(bc.vy0))
     set_res.p_res.append(np.copy(bc.p0))
     
-    t = bc.t0
-    vx, vy, p = bc.vx0, bc.vy0, bc.p0
+    #TODO SETUP THE FIRST TIMESTEP IN ANTOHER WAY!
+    #******************************
+    set_res.t_prev_2 = bc.t0
+    set_res.vx_prev_2 = np.copy(bc.vx0)
+    set_res.vy_prev_2 = np.copy(bc.vy0)
+    set_res.p_prev_2 = np.copy(bc.p0)
+    set_res.t_prev_1 = bc.t0
+    set_res.vx_prev_1 = np.copy(bc.vx0)
+    set_res.vy_prev_1 = np.copy(bc.vy0)
+    set_res.p_prev_1 = np.copy(bc.p0)
+    #*****************************
     for _ in range(set_res.n_max_driver):
-        t_end = t + set_res.dt_res
+        t_end = set_res.t_res[-1] + set_res.dt_res
         if t_end > set_res.t_final:
             t_end = set_res.t_final
-        dt = set_res.dt
-        t, vx, vy, p = solver_integrator(t, vx, vy, p, dt,
-                                         t_end, set_res)
+        t, vx, vy, p = solver_integrator(t_end, set_res)
         set_res.t_res.append(t)
         set_res.vx_res.append(np.copy(vx))
         set_res.vy_res.append(np.copy(vy))
@@ -107,34 +125,51 @@ def solver_driver(set_res: SetupAndResults, bc: BoundaryConditions):
             break
 
 
-def solver_integrator(t, vx, vy, p, dt, t_end, set_res: SetupAndResults):
+def solver_integrator(t_end, set_res: SetupAndResults):
     '''
-    Take one timestep, t -> t + dt.
+    Take one large timestep, t -> t + dt_res.
     '''
+    t = set_res.t_res[-1]
+    dt = set_res.dt
     for _ in range(set_res.n_max_integrator):
         if t_end - t < dt:
             dt = t_end - t
-        t, vx, vy, p = solver_propagator(t, vx, vy, p, dt, set_res)
+        t, vx, vy, p = solver_propagator(t, dt, set_res)
+        #TODO UPDATE IN A BETTER WAY
+        set_res.t_prev_2 = set_res.t_prev_1
+        set_res.vx_prev_2 = np.copy(set_res.vx_prev_1)
+        set_res.vy_prev_2 = np.copy(set_res.vy_prev_1)
+        set_res.p_prev_2 = np.copy(set_res.p_prev_1)
+        set_res.t_prev_1 = t
+        set_res.vx_prev_1 = np.copy(vx)
+        set_res.vy_prev_1 = np.copy(vy)
+        set_res.p_prev_1 = np.copy(p)
         if t >= t_end:
             return t, vx, vy, p
     raise RuntimeError("n_integrator was reached before it finished")
 
-def solver_propagator(t, vx, vy, p, dt, set_res: SetupAndResults):
+def solver_propagator(t, dt, set_res: SetupAndResults):
     '''
     Take one single timestep going through outer iterations and 
     checking for convergence (p. 188 - ...).
     '''
-    vx_prev, vy_prev, p_prev =  np.copy(vx), np.copy(vy), np.copy(p)
+    vx_ite = np.copy(set_res.vx_prev_1)
+    vy_ite = np.copy(set_res.vy_prev_1)
+    p_ite = np.copy(set_res.p_prev_1)
     for _ in range(set_res.n_max_outer_ite):
-        vx, vy, p = solver_outer_iteration(t, vx_prev, vy_prev, p_prev,
-                                           dt, set_res)
-        if check_convergence_outer_ite(vx, vy, p, vx_prev, vy_prev, p_prev):
+        vx_ite_new, vy_ite_new, p_ite_new = solver_outer_iteration(t, dt, vx_ite,
+                                                       vy_ite, p_ite, set_res)
+        if check_convergence_outer_ite(vx_ite_new, vy_ite_new, p_ite_new,
+                                       vx_ite, vy_ite, p_ite):
             break
-        vx_prev, vy_prev, p_prev =  np.copy(vx), np.copy(vy), np.copy(p)
-    t = t + dt
-    return t, vx, vy, p
+        vx_ite = np.copy(vx_ite_new)
+        vy_ite = np.copy(vy_ite_new)
+        p_ite = np.copy(p_ite_new)
 
-def solver_outer_iteration(t, vx, vy, p, dt, set_res):
+    return t + dt, vx_ite_new, vy_ite_new, p_ite_new
+
+def solver_outer_iteration(t, dt, vx_ite, vy_ite, p_ite,
+                           set_res: SetupAndResults):
     '''
     make sequential under-relaxation (p. 118)
     setup p.178 and p. 188
@@ -147,17 +182,20 @@ def solver_outer_iteration(t, vx, vy, p, dt, set_res):
     '''
 
     #setup eq. for momentum
-    AE, AN, AW, AS, AP, QP = get_equations_momentum(vx, vy, p, dt)
+    AE, AN, AW, AS, AP, QP = get_equations_momentum(t, dt, vx_ite, vy_ite,
+                                                    p_ite, set_res)
     #solve inner iteration for u
     solver_inner_iteration()
     #setup eq. for pressure
     get_equations_pressure()
-    #sove inner iteration
+    #solve inner iteration
     solver_inner_iteration()
     #correct velocity and pressure
     correct_presure_velocity()
     
-    return  vx, vy, p
+    vx_ite_new, vy_ite_new, p_ite_new = vx_ite, vy_ite, p_ite
+
+    return  vx_ite_new, vy_ite_new, p_ite_new
 
 
 def solver_inner_iteration():
@@ -166,7 +204,8 @@ def solver_inner_iteration():
     '''
     return None
 
-def get_equations_momentum(vx, vy, p, dt):
+def get_equations_momentum(t, dt, vx_ite, vy_ite, p_ite,
+                           set_res: SetupAndResults):
     '''
     make system of equations to solve
     Ap*up + AL*ul = Qp (eq. 7.97) 
